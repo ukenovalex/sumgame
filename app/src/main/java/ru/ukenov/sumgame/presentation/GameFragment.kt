@@ -9,20 +9,21 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import ru.ukenov.sumgame.R
 import ru.ukenov.sumgame.databinding.FragmentGameBinding
 import ru.ukenov.sumgame.domain.entity.GameResult
-import ru.ukenov.sumgame.domain.entity.GameSettings
 import ru.ukenov.sumgame.domain.entity.Level
 
 class GameFragment : Fragment() {
 
-    private val viewModel: GameViewModel by lazy {
-        ViewModelProvider(
-            this,
-            ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().application)
-        )[GameViewModel::class.java]
+    private val viewModelFactory by lazy {
+        GameViewModelFactory(level, requireActivity().application)
     }
+    private val viewModel: GameViewModel by lazy {
+        ViewModelProvider(this, viewModelFactory)[GameViewModel::class.java]
+    }
+
     private val textViewOptions by lazy {
         mutableListOf<TextView>().apply {
             add(binding.tvOption1)
@@ -57,11 +58,10 @@ class GameFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         observeViewModel()
         setClickListenersToOptions()
-        viewModel.startGame(level)
     }
 
     private fun setClickListenersToOptions() {
-        for(tvOption in textViewOptions) {
+        for (tvOption in textViewOptions) {
             tvOption.setOnClickListener {
                 viewModel.chooseAnswer(tvOption.text.toString().toInt())
             }
@@ -111,12 +111,16 @@ class GameFragment : Fragment() {
     }
 
     private fun onFinishGame(gameResult: GameResult) {
-        requireActivity().supportFragmentManager.beginTransaction()
-            .replace(
-                R.id.main_container, GameFinishedFragment.newInstance(gameResult)
-            )
-            .addToBackStack(null)
-            .commit()
+        val args = Bundle().apply {
+            putParcelable(GameFinishedFragment.GAME_RESULT, gameResult)
+        }
+        findNavController().navigate(R.id.action_gameFragment_to_gameFinishedFragment, args)
+//        requireActivity().supportFragmentManager.beginTransaction()
+//            .replace(
+//                R.id.main_container, GameFinishedFragment.newInstance(gameResult)
+//            )
+//            .addToBackStack(null)
+//            .commit()
     }
 
     override fun onDestroyView() {
@@ -132,7 +136,7 @@ class GameFragment : Fragment() {
 
     companion object {
         const val NAME = "GameFragment"
-        private const val KEY_LEVEL = "level"
+        const val KEY_LEVEL = "level"
 
         fun newInstance(level: Level): GameFragment {
             return GameFragment().apply {
